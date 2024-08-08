@@ -1,0 +1,222 @@
+---
+title: 'Atividade Analise multivariada II '
+subtitle: Amauri dos Santos Lima Neto, José Wellington Cavalcanti
+date: "24/04/2024"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+
+
+
+```{r, echo=FALSE}
+pacman::p_load("psych","MASS","klaR","summarytools","htmltools", "tidyverse")
+setwd('C:/Users/Amauri/Desktop/estatistica pastas/banco de dados')
+```
+
+# Análise discriminante
+
+## Método utilizado
+
+A análise discriminante é uma técnica estatística utilizada para classificar observações em grupos predefinidos com base em várias variáveis preditoras. O objetivo é desenvolver uma ou mais funções discriminantes que melhor diferenciam os grupos com base nas variáveis disponíveis. A técnica é comumente aplicada em estatísticas, aprendizado de máquina e outras áreas que requerem classificação de dados em categorias distintas.
+
+
+
+![diagrama de uma análise discriminante](diagrama.png)
+
+
+
+
+### Aplicações comuns
+
+**Classificação de Clientes:** Determinar a qual segmento de clientes um novo cliente pertence com base em características conhecidas.
+
+**Diagnóstico Médico:** Classificar pacientes em categorias de doenças com base em resultados de exames.
+
+**Reconhecimento de Padrões:** Usado em aprendizado de máquina para tarefas como reconhecimento facial, reconhecimento de voz, e classificação de texto.
+
+### Metodologia
+
+A análise discriminante envolve a construção de um modelo que calcula a probabilidade de uma observação pertencer a cada grupo. A classificação é frequentemente realizada calculando-se uma pontuação baseada nas funções discriminantes e classificando a observação no grupo para o qual a pontuação é mais alta.
+
+$$
+y= w_1x_1+w_2x_2+w_3x_3+...+w_nx_n
+$$
+
+onde $w_1,w_2,...,w_n$ são os coeficientes da função discriminante e determinados de modo que maximiza a distância entre as médias de cada grupo enquanto minimiza a variância dentro dos grupos
+
+### nome do banco de dados: Previsão de doenças cardíacas
+
+## Sobre os dados
+
+**Age:** Idade do paciente.
+
+**Sex:** O sexo do paciente.
+
+**Chest pain type:** Um atributo categórico que indica o tipo de dor torácica experimentada pelo paciente. Tem quatro valores possíveis.
+
+**Resting blood pressure:** A pressão arterial em repouso do paciente.
+
+**Serum cholesterol:** O nível de colesterol sérico em mg/dl do paciente.
+
+**Fasting blood sugar:** Indica se o açúcar no sangue em jejum do paciente é maior que 120 mg/dl.
+
+**Resting electrocardiographic results:** Um atributo categórico que representa os resultados do eletrocardiograma de repouso. Tem três valores possíveis.
+
+**Maximum heart rate achieved:** A frequência cardíaca máxima alcançada pelo paciente.
+
+**Exercise induced angina:** Indica se o paciente experimentou angina (dor no peito) induzida pelo exercício.
+
+**Oldpeak:** Depressão ST induzida pelo exercício em relação ao repouso.
+
+**Slope:** A inclinação do segmento ST de pico de exercício.
+
+**Number of major vessels:** Representa o número de vasos sanguíneos principais coloridos por fluoroscopia (variando de 0 a 3).
+
+**Thal:** Um atributo categórico que indica o tipo de talassemia do paciente. Tem três valores possíveis: 0 para o normal, 1 para o defeito fixo, e 2 para o defeito reversível.
+
+**Target:** A coluna alvo serve como variável de desfecho e indica a presença de doença cardíaca no paciente. Um valor de 0 significa a ausência de doença cardíaca, enquanto um valor de 1 indica a presença de doença cardíaca.
+
+```{r, echo=F}
+dados = read.csv('train_heart.csv')
+#glimpse(dados)
+
+
+
+```
+
+## Análise descritiva.
+
+
+```{r,echo=F}
+dados2 <- dados
+dados2 <- dados2 %>%
+  mutate(sex = factor(sex),
+         cp = factor(cp),
+         fbs = factor(fbs),
+         restecg = factor(restecg),
+         exang = factor(exang),
+         slope = factor(slope),
+         ca = factor(ca),
+         thal = factor(thal),
+         target = factor(target))
+```
+
+
+```{r}
+
+descr(dados2)
+
+```
+
+```{r}
+freq(dados2)
+```
+
+```{r}
+pairs.panels(dados2[,c(1,4,5,8,10)],
+             gap = 0,
+             bg = c("red","green"),
+             pch = 21)
+```
+
+## Criação do modelo:
+
+
+```{r}
+library(MASS)
+linear<- lda(target ~.,dados2)
+linear
+
+
+```
+
+```{r}
+p<-predict(linear, dados2)
+
+
+```
+
+
+
+## Comparação entre os grupos preditos
+
+```{r}
+
+ldahist(data = p$x[,1], g=dados2$target)
+
+```
+
+```{r, warning=FALSE}
+
+dados2$predicao <- predict(linear)$class
+
+
+ggplot(dados2, aes(x =age, y = trestbps, color = as.factor(target), shape = predicao)) +
+  geom_point() +
+  stat_ellipse(type = "norm", level = 0.95) +  # Adiciona as elipses de dispersão
+  labs(color = "Target", shape = "predição", title="gráfico de elipses para os grupos") +  # Personaliza as legendas
+  theme_minimal()  # Define um tema para o gráfico
+```
+
+```{r, echo=F}
+testing=read.csv("test_heart.csv")
+
+testing <- testing %>%
+  mutate(sex = factor(sex),
+         cp = factor(cp),
+         fbs = factor(fbs),
+         restecg = factor(restecg),
+         exang = factor(exang),
+         slope = factor(slope),
+         ca = factor(ca),
+         thal = factor(thal),
+         target = factor(target))
+```
+
+## tabelas de confusão para o modelo aplicado nos dados de teste e treino
+
+### Treino
+
+```{r}
+p1<- predict(linear, dados2)$class
+tab<-table(Predicted = p1, Actual = dados2$target)
+tab
+
+```
+
+### acurácia
+
+```{r}
+sum(diag(tab))/sum(tab)
+```
+
+
+### Teste
+ 
+```{r}
+p2<- predict(linear, testing)$class
+tab1<- table(Predicted = p2 , Actual = testing$target)
+tab1
+```
+
+### acurácia
+
+```{r}
+
+
+sum(diag(tab1))/sum(tab1)
+```
+Ou seja, para os dados de teste o modelo apresentou uma acurácia de aproximadamente 87%
+```{r}
+plot(tab1, col= c('green','red'), main = "grafico da tabela de confusao")
+```
+
+
+
