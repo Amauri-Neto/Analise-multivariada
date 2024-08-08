@@ -1,0 +1,332 @@
+---
+title: "Trabalho Análise Multivariada II"
+author: "Amauri Neto, Jiulia Feliciana"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(cache = TRUE)
+pacman::p_load("tidyverse","psych","corrgram", "fBasics","skimr", "dplyr","readxl","corrplot", "summarytools","cluster", "factoextra")
+```
+
+# Análise de Cluster
+## Introdução
+  A análise de cluster, também conhecida como análise de agrupamento, é uma técnica de mineração. O resultado são grupos que exibem máxima homogeneidade de objetos dentro de grupos e, ao mesmo tempo, máxima heterogeneidade entre os grupos, é uma ferramenta 
+ essencial para explorar dados, identificar padrões e segmentar dados em subconjuntos significativos.
+
+## Métodos de Análise de Cluster
+ Existem vários métodos para realizar a análise de cluster, entre os mais comuns estão:
+
+ K-means: Particiona o conjunto de dados em K clusters, onde cada observação pertence ao cluster com a média mais próxima.
+
+ 1. Hierárquico: Cria uma hierarquia de clusters, que pode ser visualizada como uma árvore ou dendrograma.
+
+ 2. DBSCAN (Density-Based Spatial Clustering of Applications with Noise): Agrupa pontos que estão próximos uns dos outros com base em uma distância mínima e um número mínimo de pontos em um cluster.
+ 3. Gaussian Mixture Models (GMM): Assume que os dados são gerados a partir de uma mistura de várias distribuições gaussianas.
+
+## Aplicações da Análise de Cluster
+
+ A análise de cluster é amplamente utilizada em várias áreas, tais como:
+
+*  Marketing: Segmentaçãoo de mercado para identificar grupos de clientes com comportamentos ou necessidades semelhantes.
+*  Biologia: Classificação de espécies ou genes com base em características observadas.
+*  Finanças: Identificação de grupos de comportamento de clientes ou risco de crédito.
+*  Ciência de dados: Redução de dimensionalidade e pré-processamento de dados para algoritmos de aprendizado de máquina.
+
+# Dados
+
+ No banco de dados a seguir teremos cidades brasileiras com maiores oportunidades para morar. Para isso teremos as seguintes variaveis: 
+
+*  ID do município 
+*  Quantidade de pessoas
+*  Quantidade de pessoas brancas
+*  Quantidade de pessoas negras
+*  Quantidade de pessoas indiginas
+*  Quantidade de pessoas amarelas
+*  Renda domiciliar média por pessoa
+*  Quantidade de estabelecimentos de ensino 
+*  Quantidade de estabelecimentos de ensino infantil 
+*  Quantidade de estabelecimentos de ensino fundamental 
+*  Quantidade de estabelecimentos de ensino médio 
+*  Quantidade de estabelecimentos de saúde
+*  Quantidade de estabelecimentos de saúde de baixa complexidade 
+*  Quantidade de estabelecimentos de saúde de média complexidade
+*  Quantidade de estabelecimentos de saúde de alta complexidade 
+*  Nome do UF
+*  Nome do município 
+
+### Com isso iremos utilizar uma análise de cluster
+
+```{r}
+dados = read.csv(file = "C:/Users/Amauri/Downloads/dados123.csv")
+dados = dados[,c(1:15,17,27)]
+```
+
+
+```{r, echo=F}
+summary(dados)
+```
+```{r, echo=F}
+ggplot(dados, aes(x = Nome_Município, y = quantidade_pessoas)) +
+  geom_bar(stat = "identity", color = 'blue', fill= 'blue' ) +
+  labs(title = "Quantidade de Pessoas por Município", x = "Município", y = "Quantidade de Pessoas") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_y_continuous(labels = scales::comma)+
+    theme(panel.background = element_blank(), # Remover fundo cinza do gráfico
+        plot.background = element_blank())
+```
+
+```{r, echo=F}
+# Transformar os dados para long format para facilitar a plotagem com ggplot2
+dados_long <- dados %>%
+  select(Nome_Município, quantidade_pessoas_brancas, quantidade_pessoas_negras, quantidade_pessoas_indigenas, quantidade_pessoas_amarelas) %>%
+  pivot_longer(cols = c(quantidade_pessoas_brancas, quantidade_pessoas_negras, quantidade_pessoas_indigenas, quantidade_pessoas_amarelas),
+               names_to = "Categoria", values_to = "Quantidade")
+
+
+
+dados_long$Categoria <- recode(dados_long$Categoria,
+                               'quantidade_pessoas_brancas' = 'Pessoas Brancas',
+                               'quantidade_pessoas_negras' = 'Pessoas Negras',
+                               'quantidade_pessoas_indigenas' = 'Pessoas Indígenas',
+                               'quantidade_pessoas_amarelas' = 'Pessoas Amarelas')
+
+legend_text_size <- 7
+legend_key_size <- unit(0.5, "lines")
+legend_title_size <- 7
+
+
+
+
+# Gerar um gráfico de barras para quantidade de pessoas brancas, negras, indígenas e amarelas por município
+ggplot(dados_long, aes(x = Nome_Município, y = Quantidade, fill = Categoria)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Quantidade de Pessoas por Categoria e Município", x = "Município", y = "Quantidade de Pessoas") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        legend.text = element_text(size = 8),
+        legend.key.size = legend_key_size,
+        legend.title = element_text(size = legend_title_size),
+                legend.background = element_blank(), # Remover fundo cinza
+        legend.box.background = element_blank(),
+        panel.background = element_blank(), # Remover fundo cinza do gráfico
+        plot.background = element_blank())+
+  scale_y_continuous(labels = scales::comma)+
+  scale_fill_manual(values = c("Pessoas Brancas" = "blue",
+                               "Pessoas Negras" = "red",
+                               "Pessoas Indígenas" = "green",
+                               "Pessoas Amarelas" = "orange"))
+  
+```
+
+
+
+
+
+```{r, echo=F}
+ggplot(dados, aes(x = Nome_Município, y = quantidade_estabelecimentos_ensino)) +
+  geom_bar(stat = "identity", color = 'darkgreen', fill= 'green' ) +
+  labs(title = "Quantidade de estabelecimentos de ensino por Município", x = "Município", y = "Quantidade de estabelecimentos") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_y_continuous(labels = scales::comma)+
+    theme(panel.background = element_blank(), # Remover fundo cinza do gráfico
+        plot.background = element_blank())
+```
+
+
+
+
+
+
+```{r, echo=F}
+
+# Transformar os dados para long format para facilitar a plotagem com ggplot2
+dados_long <- dados %>%
+  select(Nome_Município, quantidade_estabelecimentos_ensino_infantil, quantidade_estabelecimentos_ensino_fundamental, quantidade_estabelecimentos_ensino_medio) %>%
+  pivot_longer(cols = c(quantidade_estabelecimentos_ensino_infantil, quantidade_estabelecimentos_ensino_fundamental, quantidade_estabelecimentos_ensino_medio),
+               names_to = "Categoria", values_to = "Quantidade")
+
+# Renomear as categorias
+dados_long$Categoria <- recode(dados_long$Categoria,
+                               'quantidade_estabelecimentos_ensino_infantil' = 'Ensino Infantil',
+                               'quantidade_estabelecimentos_ensino_fundamental' = 'Ensino Fundamental',
+                               'quantidade_estabelecimentos_ensino_medio' = 'Ensino Médio')
+
+# Ajuste do tamanho da legenda
+legend_text_size <- 7
+legend_key_size <- unit(0.5, "lines")
+legend_title_size <- 7
+
+# Gerar um gráfico de barras para quantidade de estabelecimentos de ensino infantil, fundamental e médio por município
+ggplot(dados_long, aes(x = Nome_Município, y = Quantidade, fill = Categoria)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Quantidade de Estabelecimentos de Ensino por Categoria e Município", x = "Município", y = "Quantidade de Estabelecimentos") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        legend.text = element_text(size = legend_text_size),
+        legend.key.size = legend_key_size,
+        legend.title = element_text(size = legend_title_size),
+        legend.background = element_blank(), # Remover fundo cinza da legenda
+        legend.box.background = element_blank(),
+        panel.background = element_blank(), # Remover fundo cinza do painel do gráfico
+        plot.background = element_blank()) + # Remover fundo cinza ao redor do gráfico
+  scale_y_continuous(labels = scales::comma) +
+  scale_fill_manual(values = c("Ensino Infantil" = "blue",
+                               "Ensino Fundamental" = "red",
+                               "Ensino Médio" = "green"))
+
+```
+
+
+
+```{r, echo=F}
+ggplot(dados, aes(x = Nome_Município, y = quantidade_estabelecimentos_saude)) +
+  geom_bar(stat = "identity", color = 'darkred', fill= 'red' ) +
+  labs(title = "Quantidade de estabelecimentos de saúde por Município", x = "Município", y = "Quantidade de estabelecimentos") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_y_continuous(labels = scales::comma)+
+    theme(panel.background = element_blank(), # Remover fundo cinza do gráfico
+        plot.background = element_blank())
+```
+
+
+
+
+
+
+
+```{r, echo=F}
+dados_long_saude <- dados %>%
+  select(Nome_Município, quantidade_estabelecimentos_saude_baixa_complexidade, quantidade_estabelecimentos_saude_media_coplexidade, quantidade_estabelecimentos_saude_alta_coplexidade) %>%
+  pivot_longer(cols = c(quantidade_estabelecimentos_saude_baixa_complexidade, quantidade_estabelecimentos_saude_media_coplexidade, quantidade_estabelecimentos_saude_alta_coplexidade),
+               names_to = "Categoria", values_to = "Quantidade")
+
+# Renomear as categorias
+dados_long_saude$Categoria <- recode(dados_long_saude$Categoria,
+                               'quantidade_estabelecimentos_saude_baixa_complexidade' = 'Baixa Complexidade',
+                               'quantidade_estabelecimentos_saude_media_coplexidade' = 'Média Complexidade',
+                               'quantidade_estabelecimentos_saude_alta_coplexidade' = 'Alta Complexidade')
+
+# Ajuste do tamanho da legenda
+legend_text_size <- 7
+legend_key_size <- unit(0.5, "lines")
+legend_title_size <- 7
+
+# Gerar um gráfico de barras para quantidade de estabelecimentos de saúde de baixa, média e alta complexidade por município
+ggplot(dados_long_saude, aes(x = Nome_Município, y = Quantidade, fill = Categoria)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Quantidade de Estabelecimentos de Saúde por Categoria e Município", x = "Município", y = "Quantidade de Estabelecimentos") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        legend.text = element_text(size = legend_text_size),
+        legend.key.size = legend_key_size,
+        legend.title = element_text(size = legend_title_size),
+        legend.background = element_blank(), # Remover fundo cinza da legenda
+        legend.box.background = element_blank(),
+        panel.background = element_blank(), # Remover fundo cinza do painel do gráfico
+        plot.background = element_blank()) + # Remover fundo cinza ao redor do gráfico
+  scale_y_continuous(labels = scales::comma) +
+  scale_fill_manual(values = c("Baixa Complexidade" = "blue","Média Complexidade" = "red", "Alta Complexidade" = "green"))
+```
+
+
+```{r, echo=F}
+tempos = c()
+row.names(dados)= dados$Nome_Município
+dados.padronizados <- scale(dados[,2:15])
+dados = dados[,2:15]
+```
+
+
+# Análise de clusters
+## Número optimo de cluster
+```{r, echo=F}
+fviz_nbclust(dados, kmeans, method = "wss") +
+  geom_vline(xintercept = 4, linetype = 2)
+```
+
+```{r, echo=F}
+kmeans.clusters <- kmeans(dados, 4, nstart = 20)
+```
+
+
+```{r, echo=F, warning=F}
+tempos[1] <- system.time(
+grafico1 <- fviz_cluster(kmeans.clusters, data = dados,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+             ellipse.type = "euclid",
+             star.plot = TRUE, 
+             repel = TRUE,
+             ggtheme = theme_minimal())
+)
+print(grafico1)
+```
+
+## Com três clusters:
+
+```{r}
+cluster2 <- kmeans(dados, 3, nstart = 20)
+```
+
+
+```{r}
+fviz_cluster(cluster2, data = dados,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800"),
+             ellipse.type = "euclid",
+             star.plot = TRUE, 
+             repel = TRUE,
+             ggtheme = theme_minimal())
+```
+
+# Método Hierárquico Aglomerativo:
+## Matriz de similaridade
+
+```{r, echo=F, warning=F}
+d = dist(dados, method = "euclidean") # matriz de distancias
+m = as.matrix(d)
+fviz_dist(d, 
+   gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+```
+
+```{r, echo=F, warning=F}
+k <- 2:floor(sqrt(nrow(dados)))
+D <- dist(dados.padronizados)^2
+CL_H = hclust(D, method = "ward.D")
+```
+
+
+```{r, echo=F, warning=F}
+tempos[2] <- system.time(
+
+
+grafico2 <- fviz_dend(CL_H, k = 4,# Cut in four groups
+          cex = 0.5, # label size
+          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800","#FC4E07"),
+          color_labels_by_k = TRUE, # color labels by groups
+          rect = TRUE # Add rectangle around groups
+))
+print(grafico2)
+```
+
+
+
+## Com Três clusters
+
+
+```{r, echo=F, warning=F}
+ fviz_dend(CL_H, k = 3,# Cut in four groups
+          cex = 0.5, # label size
+          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800","#FC4E07"),
+          color_labels_by_k = TRUE, # color labels by groups
+          rect = TRUE # Add rectangle around groups
+ )
+```
+# comparação sobre o tempo dos dois métodos utilizados:
+
+```{r}
+print(tempos)
+```
+
+# Referências:
+Nesta analise foram utilizados principalmente os materiais mostrados em sala de aula e artigos do rpubs(https://rpubs.com/LeMaria/cluster), algumas dúvidas sobre os códigos e definições também foram sanadas pelo Chatgpt.

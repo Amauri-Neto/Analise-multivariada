@@ -1,0 +1,202 @@
+---
+title: "Análise de correspondência"
+date: "`r Sys.Date()`"
+author: "Amauri Neto, Vinicius"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(cache = TRUE)
+pacman::p_load("FactoMineR", "factoextra", "tidyverse","psych", "summarytools","statBasics")
+```
+
+A Análise de Correspondência Múltipla (ACM) é uma técnica estatística utilizada para explorar e visualizar a associação entre categorias de variáveis qualitativas (categóricas).
+Ela é uma extensão da Análise de Correspondência Simples (ACS), que se aplica a duas variáveis categóricas, e permite a análise simultânea de várias dessas variáveis.
+
+## Princípios da ACM
+
+Entrada de Dados: A matriz de dados utilizada na ACM é geralmente uma matriz de contingência ou uma matriz de dados categóricos onde as linhas representam as unidades de observação (por exemplo, indivíduos) e as colunas representam as variáveis categóricas.
+
+## Transformação dos Dados:
+
+Os dados são transformados em uma matriz binária indicadora, onde cada categoria de cada variável é representada por uma coluna, e cada célula indica a presença (1) ou ausência (0) da categoria para cada observação.
+
+## Decomposição da Matriz:
+
+A ACM decompõe a matriz binária em componentes principais utilizando decomposição em valores singulares (SVD), similar ao que é feito na Análise de Componentes Principais (PCA) para dados quantitativos.
+
+## Visualização:
+
+Os resultados da ACM são geralmente representados em mapas fatoriais ou gráficos de correspondência que mostram as associações entre categorias das diferentes variáveis.
+
+# Aplicações da ACM
+
+A ACM é amplamente utilizada em diversas áreas, incluindo:
+
+-   Identificação de perfis de consumidores com base em respostas a questionários categóricos.
+    Análise de preferências de produtos ou serviços.
+    Ciências Sociais:
+
+-   Estudo de padrões de comportamento social ou atitudes.
+    Análise de dados de pesquisas sociológicas e psicológicas.
+    Epidemiologia:
+
+-   Análise de fatores de risco categóricos em estudos de saúde pública.
+
+-   Exploração de padrões de doença ou condições de saúde em diferentes grupos populacionais.
+    Administração e Negócios:
+
+-   Análise de satisfação do cliente com base em respostas a questionários categóricos.
+
+-   Identificação de segmentos de mercado.
+
+# Sobre os dados:
+
+Os dados utilizados traz informações sobre viagens aèreas entre 6 das principais cidades metropolitanas da Índia e os dados foram coletados durante 50 dias, de 11 de fevereiro a 31 de março de 2022 e traz as seguintes variáveis:
+
+**Companhia aérea:** O nome da companhia aérea, é uma característica categórica com 6 companhias aéreas diferentes.
+
+**Cidade Origem:** Cidade de onde o voo decola.
+É uma característica categórica ter 6 cidades únicas.
+
+**Horário de partida:** Este é um recurso categórico obtido pelo agrupamento de períodos determina se o voo saiu de dia ou á noite.
+
+**Paradas:** Um recurso categórico com 3 valores distintos que armazena o número de paradas entre as cidades de origem e de destino.
+
+**Cidade Destino:** Cidade onde o voo pousará.
+É uma característica categórica ter 6 cidades .
+
+**Classe:** Um recurso categórico que contém informações sobre a classe do assento; tem dois valores distintos: executiva e Economica.
+
+**Duração:** foi catégorizada de acordo com o tempo de viagem, sendo curta, média ou longa.
+
+**horário de chegada:** Este é um recurso categórico obtido pelo agrupamento de períodos determina se o voo saiu de dia ou á noite.
+
+**Preço:** váriavel categorica que indica o preço das passagens, sendo elas: barata, média e cara.
+
+```{r, echo=F}
+data <- read.csv('C:/Users/Amauri/Downloads/economy.csv')
+data$date= NULL
+df = data[1:100,]
+
+
+# Função para converter tempo em minutos
+time_to_minutes <- function(time_str) {
+  parts <- unlist(strsplit(time_str, "h |m"))
+  hours <- as.numeric(parts[1])
+  minutes <- as.numeric(parts[2])
+  return(hours * 60 + minutes)
+}
+
+# Categorizar arr_time e dep_time como dia e noite
+df$arr_period <- ifelse(as.POSIXct(df$arr_time, format="%H:%M") >= as.POSIXct("06:00", format="%H:%M") &
+                          as.POSIXct(df$arr_time, format="%H:%M") < as.POSIXct("18:00", format="%H:%M"), "saida_dia", "saida_noite")
+df$arr_time= NULL
+df$dep_period <- ifelse(as.POSIXct(df$dep_time, format="%H:%M") >= as.POSIXct("06:00", format="%H:%M") &
+                          as.POSIXct(df$dep_time, format="%H:%M") < as.POSIXct("18:00", format="%H:%M"), "chegada_dia", "chegada_noite")
+df$dep_time= NULL
+# Remover a vírgula do preço e converter para numérico
+df$price <- as.numeric(gsub(",", "", df$price))
+
+# Categorizar preço
+df$price_category <- cut(df$price,
+                         breaks = c(-Inf, 3000, 6000, Inf),
+                         labels = c("barata", "média", "cara"))
+df$price= NULL
+# Converter time_taken para minutos e categorizar
+df$time_taken_minutes <- sapply(df$time_taken, time_to_minutes)
+df$time_category <- cut(df$time_taken_minutes,
+                        breaks = c(-Inf, 300, 600, Inf),
+                        labels = c("curta", "média", "longa"))
+df$time_taken=NULL
+df$time_taken_minutes=NULL
+df$num_code=NULL
+# Visualizar o resultado
+
+
+df <- df %>% mutate_if(is.character, as.factor) %>% mutate_if(is.numeric, as.factor)
+
+glimpse(df)
+
+df <- na.omit(df)
+```
+
+# Analises MCA
+
+```{r,echo=F}
+acm_resultado <- MCA(df, graph = F)
+fviz_mca_var(acm_resultado, repel = TRUE, col.var = "blue")
+```
+
+```{r,echo=F}
+fviz_mca_ind(acm_resultado, repel = TRUE, col.ind = "red")
+```
+
+```{r,echo=F}
+fviz_mca_biplot(acm_resultado, repel = TRUE, col.var = "blue", col.ind = "red")
+```
+
+```{r,echo=F}
+fviz_mca_var(acm_resultado, 
+             repel = TRUE, 
+             col.var = "blue", 
+             addEllipses = TRUE, 
+             ellipse.level = 0.95)   
+
+```
+
+```{r,echo=F}
+fviz_mca_ind(acm_resultado, 
+             repel = TRUE, 
+             col.ind = "red", 
+             addEllipses = TRUE, 
+             ellipse.level = 0.95)  # Nível de confiança de 95%
+```
+
+```{r,echo=F}
+fviz_mca_biplot(acm_resultado, 
+                repel = TRUE, 
+                col.var = "blue", 
+                col.ind = "red", 
+                addEllipses = TRUE, 
+                ellipse.level = 0.95)  # Nível de confiança de 95%
+
+```
+
+```{r,echo=F}
+# Gráfico de contribuições das variáveis para o primeiro eixo
+fviz_contrib(acm_resultado, choice = "var", axes = 1, top = 10) + 
+  ggtitle("Contribuições das categorias para o Primeiro Eixo")
+```
+
+```{r,echo=F}
+# Gráfico de contribuições das variáveis para o segundo eixo
+fviz_contrib(acm_resultado, choice = "var", axes = 2, top = 10) + 
+  ggtitle("Contribuições das categorias para o Segundo Eixo")
+```
+
+```{r,echo=F}
+# Visualização dos indivíduos (empresas de viagem)
+fviz_mca_ind(acm_resultado, label = "none", habillage = df$airline, palette = "jco") + 
+  ggtitle("MCA - Companhia aérea") +
+  theme_minimal()
+```
+
+```{r,echo=F}
+# Visualização das variáveis
+fviz_mca_var(acm_resultado, label = "none") + ggtitle("MCA - Variáveis")
+
+```
+
+```{r,echo=F}
+# Visualização das variáveis (contribuições)
+fviz_mca_var(acm_resultado, col.var = "steelblue", alpha.var = 0.8, repel = TRUE) + 
+  ggtitle("MCA - Variáveis") +
+  theme_minimal()
+```

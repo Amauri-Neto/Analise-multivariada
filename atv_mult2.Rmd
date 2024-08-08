@@ -1,0 +1,158 @@
+---
+title: "Atividade Multivariada II"
+author: "Amauri dos santos lima neto"
+date: "2024-05-09"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load("philentropy", "tibble")
+```
+
+
+# Questão 1:
+```{r}
+y = c(32.25, 47.80, 29.40, 30.21, 78.50)
+x = c(25.50, 12.30, 2.53, 42.50, 55.55)
+```
+
+```{r}
+df_2 = tibble(x,y)
+```
+
+## Distância euclidiana:
+```{r}
+distance(
+  x = df_2,
+  method = "euclidean"
+)
+```
+de acordo com a distância eucliana temos que a ultima observação é a que mais se distancia das demais e V1 e V4 apresentam a menor distância. 
+
+## Distância de manhattan:
+```{r}
+distance(
+  x = df_2,
+  method = "manhattan"
+)
+```
+As mesmas observações ocorrem para a distância de manhattan.
+
+## Distância de chebyshev:
+```{r}
+distance(
+  x = df_2,
+  method = "chebyshev"
+)
+```
+de acordo com a distância de chebyshev, a última observação ainda apresenta as maiores distâncias com as demais, porém a distância mais curta agora está entre V1 e V2.
+
+
+
+# Questão 2:
+
+
+```{r}
+# lendo o arquivo txt
+dados <- read.table('C:/Users/Amauri/Desktop/estatistica pastas/banco de dados/DADOS.TXT', header = TRUE, sep = "\t", dec = ",")
+```
+
+
+```{r}
+#renomeando as linhas com a coluna UF
+rownames(dados) <- dados$UF
+
+# Removendo a coluna "UF" do data frame (opcional)
+dados <- dados[, -1]
+dados <- scale(dados)
+print(dados)
+```
+
+
+## Distância de mahalanobis
+```{r}
+mahalanobis(dados, colMeans(dados), cov(dados))
+```
+
+
+# Questão 3
+```{r}
+#dados
+nhoque = c(79, 54, 78, 99, 23, 10, 23, 45)
+molho = c(65, 78, 89, 35, 29, 44, 67, 29)
+
+df_3 = tibble(nhoque,molho)
+
+#calculando a distância euclidiana
+
+dist3 =distance(
+  x = df_3,
+  method = "euclidean"
+)
+```
+```{r}
+
+valores_nao_nulos <- dist3[dist3 > 0]
+min(valores_nao_nulos)
+```
+
+calculando diretamente as distâncias a menor é 19.84943, porém eu acho que esteja errado pois o valor calculado nesse caso foi de cada combinação em relação as outras.
+
+
+# Recalculando as distâncias:
+```{r}
+# Defina os dois vetores
+vetor1 <- nhoque
+vetor2 <- molho
+
+# Inicialize uma matriz para armazenar as distâncias
+num_elementos_vetor1 <- length(vetor1)
+num_elementos_vetor2 <- length(vetor2)
+distancias <- matrix(NA, nrow = num_elementos_vetor1, ncol = num_elementos_vetor2)
+
+# Loop para calcular as distâncias
+for (i in 1:num_elementos_vetor1) {
+  for (j in 1:num_elementos_vetor2) {
+    distancias[i, j] <- sqrt((vetor1[i] - vetor2[j])^2)
+  }
+}
+
+# Exiba a matriz de distâncias
+print(distancias)
+```
+Nesse caso caso foi calculado a menor distância entre cada elemento do vetor nhoque com cada elemento do vetor molho e assim chegamos na menor distância de 0, ou seja, como já se imagina a menor distância seria entre 78 gramas de nhoque com 78 gramas de molho.
+
+
+# Questão 4:
+
+
+```{r}
+Valentina = c(20, 15, 22, 23)
+Enzo = c(12, 21, 14, 10)
+
+```
+
+```{r}
+# Defina os dois vetores
+vetor1 <- Valentina
+vetor2 <- Enzo
+
+# Inicialize uma matriz para armazenar as distâncias
+num_elementos_vetor1 <- length(vetor1)
+num_elementos_vetor2 <- length(vetor2)
+distancias <- matrix(NA, nrow = num_elementos_vetor1, ncol = num_elementos_vetor2)
+
+# Loop para calcular as distâncias
+for (i in 1:num_elementos_vetor1) {
+  for (j in 1:num_elementos_vetor2) {
+    distancias[i, j] <- sqrt((vetor1[i] - vetor2[j])^2)
+  }
+}
+
+# Exiba a matriz de distâncias
+print(distancias)
+```
+Nesse caso o Enzo foi carregado na última partida em que jogaram, apresentando uma distância de 13 abates se comparado a Valentina.
